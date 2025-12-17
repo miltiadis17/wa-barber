@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bookings - Barbershop Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="dashboard">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>💈 Barbershop</h1>
+                <p id="currentUser">Admin Panel</p>
+            </div>
+
+            <nav class="nav">
+                <a href="dashboard.html" class="nav-item">
+                    <span class="nav-item-icon">📊</span>
+                    Dashboard
+                </a>
+                <a href="bookings.html" class="nav-item active">
+                    <span class="nav-item-icon">📅</span>
+                    Bookings
+                </a>
+                <a href="masters.html" class="nav-item">
+                    <span class="nav-item-icon">👨‍🦱</span>
+                    Masters
+                </a>
+                <a href="services.html" class="nav-item">
+                    <span class="nav-item-icon">✂️</span>
+                    Services
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button onclick="logout()" class="btn btn-secondary btn-block btn-sm">Logout</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Bookings</h1>
+                <p>View and manage all bookings</p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Filters</h2>
+                </div>
+
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="filterDate">Date</label>
+                        <input type="date" id="filterDate">
+                    </div>
+                    <div class="filter-group">
+                        <label for="filterMaster">Master</label>
+                        <select id="filterMaster">
+                            <option value="">All Masters</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filterPhone">Client Phone</label>
+                        <input type="text" id="filterPhone" placeholder="Search by phone...">
+                    </div>
+                    <div class="filter-group">
+                        <label for="filterStatus">Status</label>
+                        <select id="filterStatus">
+                            <option value="">All</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button onclick="applyFilters()" class="btn btn-primary">Apply Filters</button>
+                <button onclick="clearFilters()" class="btn btn-secondary">Clear</button>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Bookings List</h2>
+                </div>
+
+                <div id="message" style="display: none;"></div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Service</th>
+                                <th>Master</th>
+                                <th>Client</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bookingsTable">
+                            <tr><td colspan="8" class="loading">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Booking</h2>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+
+            <form id="editForm">
+                <input type="hidden" id="editId">
+                <div class="form-group">
+                    <label for="editService">Service</label>
+                    <select id="editService" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="editMaster">Master</label>
+                    <select id="editMaster" required></select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editDate">Date</label>
+                        <input type="date" id="editDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editTime">Time</label>
+                        <input type="time" id="editTime" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="editStatus">Status</label>
+                    <select id="editStatus">
+                        <option value="confirmed">Confirmed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" onclick="closeEditModal()" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        let bookings = [];
+        let masters = [];
+        let services = [];
+
+        async function init() {
+            await API.checkAuth();
+            await loadMasters();
+            await loadServices();
+            await loadBookings();
+        }
+
+        async function loadMasters() {
+            masters = await API.getMasters();
+            const selectHTML = '<option value="">All Masters</option>' +
+                masters.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+            document.getElementById('filterMaster').innerHTML = selectHTML;
+        }
+
+        async function loadServices() {
+            services = await API.getServices();
+        }
+
+        async function loadBookings(filters = {}) {
+            try {
+                bookings = await API.getBookings(filters);
+
+                const tableHTML = bookings.map(b => `
+                    <tr>
+                        <td>#${b.id}</td>
+                        <td>${formatDate(b.booking_date)}</td>
+                        <td>${formatTime(b.booking_time)}</td>
+                        <td>${b.service_name}</td>
+                        <td>${b.master_name}</td>
+                        <td>${b.client_phone}</td>
+                        <td><span class="badge badge-${b.status === 'confirmed' ? 'success' : 'danger'}">${b.status}</span></td>
+                        <td>
+                            <div class="btn-group">
+                                <button onclick="editBooking(${b.id})" class="btn btn-sm btn-primary">Edit</button>
+                                <button onclick="cancelBooking(${b.id})" class="btn btn-sm btn-danger">Cancel</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('bookingsTable').innerHTML = tableHTML || '<tr><td colspan="8" class="text-center">No bookings found</td></tr>';
+            } catch (error) {
+                showMessage('message', error.message, 'error');
+            }
+        }
+
+        function applyFilters() {
+            const filters = {};
+            const date = document.getElementById('filterDate').value;
+            const master = document.getElementById('filterMaster').value;
+            const phone = document.getElementById('filterPhone').value;
+            const status = document.getElementById('filterStatus').value;
+
+            if (date) filters.date = date;
+            if (master) filters.master_id = master;
+            if (phone) filters.client_phone = phone;
+            if (status) filters.status = status;
+
+            loadBookings(filters);
+        }
+
+        function clearFilters() {
+            document.getElementById('filterDate').value = '';
+            document.getElementById('filterMaster').value = '';
+            document.getElementById('filterPhone').value = '';
+            document.getElementById('filterStatus').value = '';
+            loadBookings();
+        }
+
+        async function editBooking(id) {
+            const booking = bookings.find(b => b.id === id);
+            if (!booking) return;
+
+            // Populate form
+            document.getElementById('editId').value = booking.id;
+            document.getElementById('editDate').value = booking.booking_date;
+            document.getElementById('editTime').value = booking.booking_time;
+            document.getElementById('editStatus').value = booking.status;
+
+            // Populate selects
+            document.getElementById('editService').innerHTML = services.map(s =>
+                `<option value="${s.id}" ${s.id === booking.service_id ? 'selected' : ''}>${s.name}</option>`
+            ).join('');
+
+            document.getElementById('editMaster').innerHTML = masters.map(m =>
+                `<option value="${m.id}" ${m.id === booking.master_id ? 'selected' : ''}>${m.name}</option>`
+            ).join('');
+
+            // Show modal
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+        }
+
+        async function cancelBooking(id) {
+            if (!confirm('Are you sure you want to cancel this booking?')) return;
+
+            try {
+                await API.cancelBooking(id);
+                showMessage('message', 'Booking cancelled successfully', 'success');
+                loadBookings();
+            } catch (error) {
+                showMessage('message', error.message, 'error');
+            }
+        }
+
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const id = document.getElementById('editId').value;
+            const data = {
+                service_id: parseInt(document.getElementById('editService').value),
+                master_id: parseInt(document.getElementById('editMaster').value),
+                booking_date: document.getElementById('editDate').value,
+                booking_time: document.getElementById('editTime').value,
+                status: document.getElementById('editStatus').value
+            };
+
+            try {
+                await API.updateBooking(id, data);
+                showMessage('message', 'Booking updated successfully', 'success');
+                closeEditModal();
+                loadBookings();
+            } catch (error) {
+                showMessage('message', error.message, 'error');
+            }
+        });
+
+        async function logout() {
+            await API.logout();
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

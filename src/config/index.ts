@@ -37,6 +37,13 @@ export const config = {
     cronSchedule: '0 3 * * *', // Every day at 03:00
     daysToKeep: 3, // Keep bookings for 3 days in the past
   },
+
+  // Admin panel settings
+  admin: {
+    username: process.env.ADMIN_USERNAME || 'admin',
+    passwordHash: process.env.ADMIN_PASSWORD_HASH || '$2b$10$CfmMs08vhsNElDy6AVtLguIZiPDdNK5Lh4iCWTa9UDJKqYzvwqUj2', // default: "admin123"
+    sessionSecret: process.env.SESSION_SECRET || 'change-this-secret-in-production',
+  },
 };
 
 // Validate required environment variables

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Services - Barbershop Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="dashboard">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>💈 Barbershop</h1>
+                <p>Admin Panel</p>
+            </div>
+
+            <nav class="nav">
+                <a href="dashboard.html" class="nav-item">
+                    <span class="nav-item-icon">📊</span>
+                    Dashboard
+                </a>
+                <a href="bookings.html" class="nav-item">
+                    <span class="nav-item-icon">📅</span>
+                    Bookings
+                </a>
+                <a href="masters.html" class="nav-item">
+                    <span class="nav-item-icon">👨‍🦱</span>
+                    Masters
+                </a>
+                <a href="services.html" class="nav-item active">
+                    <span class="nav-item-icon">✂️</span>
+                    Services
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button onclick="logout()" class="btn btn-secondary btn-block btn-sm">Logout</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Services</h1>
+                <p>Manage barbershop services</p>
+            </div>
+
+            <button onclick="showAddModal()" class="btn btn-primary mb-2">Add New Service</button>
+
+            <div class="card">
+                <div id="message" style="display: none;"></div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Duration</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="servicesTable">
+                            <tr><td colspan="5" class="loading">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="serviceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add Service</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+
+            <form id="serviceForm">
+                <input type="hidden" id="serviceId">
+                <div class="form-group">
+                    <label for="serviceName">Name</label>
+                    <input type="text" id="serviceName" required>
+                </div>
+                <div class="form-group">
+                    <label for="serviceDuration">Duration (minutes)</label>
+                    <input type="number" id="serviceDuration" value="30" min="15" step="15" required>
+                </div>
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        let services = [];
+
+        async function init() {
+            await API.checkAuth();
+            await loadServices();
+        }
+
+        async function loadServices() {
+            try {
+                services = await API.getServices();
+
+                const tableHTML = services.map(s => `
+                    <tr>
+                        <td>#${s.id}</td>
+                        <td>${s.name}</td>
+                        <td>${s.duration_minutes} min</td>
+                        <td>${new Date(s.created_at).toLocaleDateString()}</td>
+                        <td>
+                            <div class="btn-group">
+                                <button onclick="editService(${s.id})" class="btn btn-sm btn-primary">Edit</button>
+                                <button onclick="deleteService(${s.id})" class="btn btn-sm btn-danger">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('servicesTable').innerHTML = tableHTML || '<tr><td colspan="5" class="text-center">No services found</td></tr>';
+            } catch (error) {
+                showMessage('message', error.message, 'error');
+            }
+        }
+
+        function showAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add Service';
+            document.getElementById('serviceForm').reset();
+            document.getElementById('serviceId').value = '';
+            document.getElementById('serviceDuration').value = '30';
+            document.getElementById('serviceModal').classList.add('active');
+        }
+
+        async function editService(id) {
+            const service = services.find(s => s.id === id);
+            if (!service) return;
+
+            document.getElementById('modalTitle').textContent = 'Edit Service';
+            document.getElementById('serviceId').value = service.id;
+            document.getElementById('serviceName').value = service.name;
+            document.getElementById('serviceDuration').value = service.duration_minutes;
+            document.getElementById('serviceModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('serviceModal').classList.remove('active');
+        }
+
+        async function deleteService(id) {
+            if (!confirm('Are you sure? This will fail if the service has existing bookings.')) return;
+
+            try {
+                await API.deleteService(id);
+                showMessage('message', 'Service deleted successfully', 'success');
+                loadServices();
+            } catch (error) {
+                showMessage('message', error.message, 'error');
+            }
+        }
+
+        document.getElementById('serviceForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const id = document.getElementById('serviceId').value;
+            const data = {
+                name: document.getElementById('serviceName').value,
+                duration_minutes: parseInt(document.getElementById('serviceDuration').value)
+            };
+
+            try {
+                if (id) {
+                    await API.updateService(id, data);
+                    showMessage('message', 'Service updated successfully', 'success');
+                } else {
+                    await API.createService(data);
+                    showMessage('message', 'Service created successfully', 'success');
+                }
+                closeModal();
+                loadServices();
+            } catch (error) {
+                showMessage('message', error.message, 'error');
+            }
+        });
+
+        async function logout() {
+            await API.logout();
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

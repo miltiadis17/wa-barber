@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masters - Barbershop Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="dashboard">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>💈 Barbershop</h1>
+                <p>Admin Panel</p>
+            </div>
+
+            <nav class="nav">
+                <a href="dashboard.html" class="nav-item">
+                    <span class="nav-item-icon">📊</span>
+                    Dashboard
+                </a>
+                <a href="bookings.html" class="nav-item">
+                    <span class="nav-item-icon">📅</span>
+                    Bookings
+                </a>
+                <a href="masters.html" class="nav-item active">
+                    <span class="nav-item-icon">👨‍🦱</span>
+                    Masters
+                </a>
+                <a href="services.html" class="nav-item">
+                    <span class="nav-item-icon">✂️</span>
+                    Services
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button onclick="logout()" class="btn btn-secondary btn-block btn-sm">Logout</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Masters</h1>
+                <p>Manage barbershop masters</p>
+            </div>
+
+            <button onclick="showAddModal()" class="btn btn-primary mb-2">Add New Master</button>
+
+            <div class="card">
+                <div id="message" style="display: none;"></div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mastersTable">
+                            <tr><td colspan="5" class="loading">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="masterModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add Master</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+
+            <form id="masterForm">
+                <input type="hidden" id="masterId">
+                <div class="form-group">
+                    <label for="masterName">Name</label>
+                    <input type="text" id="masterName" required>
+                </div>
+                <div class="form-group">
+                    <label for="masterActive">
+                        <input type="checkbox" id="masterActive" checked>
+                        Active
+                    </label>
+                </div>
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        let masters = [];
+
+        async function init() {
+            await API.checkAuth();
+            await loadMasters();
+        }
+
+        async function loadMasters() {
+            try {
+                masters = await API.getMasters();
+
+                const tableHTML = masters.map(m => `
+                    <tr>
+                        <td>#${m.id}</td>
+                        <td>${m.name}</td>
+                        <td><span class="badge badge-${m.is_active ? 'success' : 'danger'}">${m.is_active ? 'Active' : 'Inactive'}</span></td>
+                        <td>${new Date(m.created_at).toLocaleDateString()}</td>
+                        <td>
+                            <div class="btn-group">
+                                <button onclick="editMaster(${m.id})" class="btn btn-sm btn-primary">Edit</button>
+                                <button onclick="deleteMaster(${m.id})" class="btn btn-sm btn-danger">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('mastersTable').innerHTML = tableHTML || '<tr><td colspan="5" class="text-center">No masters found</td></tr>';
+            } catch (error) {
+                showMessage('message', error.message, 'error');
+            }
+        }
+
+        function showAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add Master';
+            document.getElementById('masterForm').reset();
+            document.getElementById('masterId').value = '';
+            document.getElementById('masterActive').checked = true;
+            document.getElementById('masterModal').classList.add('active');
+        }
+
+        async function editMaster(id) {
+            const master = masters.find(m => m.id === id);
+            if (!master) return;
+
+            document.getElementById('modalTitle').textContent = 'Edit Master';
+            document.getElementById('masterId').value = master.id;
+            document.getElementById('masterName').value = master.name;
+            document.getElementById('masterActive').checked = master.is_active;
+            document.getElementById('masterModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('masterModal').classList.remove('active');
+        }
+
+        async function deleteMaster(id) {
+            if (!confirm('Are you sure? This will deactivate the master if they have bookings.')) return;
+
+            try {
+                const result = await API.deleteMaster(id);
+                if (result.deactivated) {
+                    showMessage('message', result.message, 'success');
+                } else {
+                    showMessage('message', 'Master deleted successfully', 'success');
+                }
+                loadMasters();
+            } catch (error) {
+                showMessage('message', error.message, 'error');
+            }
+        }
+
+        document.getElementById('masterForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const id = document.getElementById('masterId').value;
+            const data = {
+                name: document.getElementById('masterName').value,
+                is_active: document.getElementById('masterActive').checked
+            };
+
+            try {
+                if (id) {
+                    await API.updateMaster(id, data);
+                    showMessage('message', 'Master updated successfully', 'success');
+                } else {
+                    await API.createMaster(data);
+                    showMessage('message', 'Master created successfully', 'success');
+                }
+                closeModal();
+                loadMasters();
+            } catch (error) {
+                showMessage('message', error.message, 'error');
+            }
+        });
+
+        async function logout() {
+            await API.logout();
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
