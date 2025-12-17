@@ -20,6 +20,7 @@ router.get('/stats', requireAuth, AdminStatsController.getStats);
 
 // Bookings
 router.get('/bookings', requireAuth, AdminBookingsController.getAll);
+router.get('/bookings/calendar/events', requireAuth, AdminBookingsController.getCalendarEvents);
 router.get('/bookings/:id', requireAuth, AdminBookingsController.getById);
 router.put('/bookings/:id', requireAuth, AdminBookingsController.update);
 router.delete('/bookings/:id', requireAuth, AdminBookingsController.delete);

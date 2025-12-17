@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendar - Barbershop Admin</title>
+  <link rel="stylesheet" href="/css/admin.css">
+  <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css' rel='stylesheet' />
+  <style>
+    .calendar-container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    .calendar-header h1 {
+      margin: 0;
+      font-size: 28px;
+      color: #1f2937;
+    }
+
+    .filter-controls {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+
+    .filter-controls select {
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      background: white;
+    }
+
+    .filter-controls select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .legend {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #f9fafb;
+      border-radius: 8px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+    }
+
+    #calendar {
+      margin-top: 20px;
+    }
+
+    /* FullCalendar customization */
+    .fc {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    .fc .fc-button-primary {
+      background-color: #3b82f6;
+      border-color: #3b82f6;
+    }
+
+    .fc .fc-button-primary:hover {
+      background-color: #2563eb;
+      border-color: #2563eb;
+    }
+
+    .fc .fc-button-primary:disabled {
+      background-color: #93c5fd;
+      border-color: #93c5fd;
+    }
+
+    .fc-event {
+      cursor: pointer;
+      border-radius: 4px;
+      padding: 2px 4px;
+      font-size: 13px;
+    }
+
+    .fc-event:hover {
+      opacity: 0.85;
+    }
+
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      animation: fadeIn 0.2s;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-content {
+      background-color: white;
+      margin: 10% auto;
+      padding: 30px;
+      border-radius: 12px;
+      max-width: 500px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      animation: slideIn 0.3s;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateY(-50px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 22px;
+      color: #1f2937;
+    }
+
+    .close {
+      font-size: 28px;
+      font-weight: bold;
+      color: #6b7280;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .close:hover {
+      color: #1f2937;
+    }
+
+    .modal-body {
+      line-height: 1.8;
+    }
+
+    .detail-row {
+      display: flex;
+      padding: 12px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+
+    .detail-label {
+      font-weight: 600;
+      color: #4b5563;
+      min-width: 120px;
+    }
+
+    .detail-value {
+      color: #1f2937;
+      flex: 1;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-confirmed {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+
+    .status-pending {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+
+    .status-cancelled {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2>💈 Barbershop</h2>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/admin/dashboard.html">📊 Dashboard</a>
+        <a href="/admin/bookings.html">📅 Bookings</a>
+        <a href="/admin/calendar.html" class="active">🗓️ Calendar</a>
+        <a href="/admin/masters.html">👨‍💼 Masters</a>
+        <a href="/admin/services.html">✂️ Services</a>
+        <a href="#" onclick="logout()">🚪 Logout</a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <div class="calendar-container">
+        <div class="calendar-header">
+          <h1>📅 Calendar View</h1>
+          <div class="filter-controls">
+            <select id="masterFilter" onchange="filterByMaster()">
+              <option value="">All Masters</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-color" style="background-color: #3B82F6;"></div>
+            <span>John</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background-color: #10B981;"></div>
+            <span>Andrew</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background-color: #F59E0B;"></div>
+            <span>Paul</span>
+          </div>
+        </div>
+
+        <div id="calendar"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Booking Details Modal -->
+  <div id="bookingModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Booking Details</h2>
+        <span class="close" onclick="closeModal()">&times;</span>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Details will be inserted here -->
+      </div>
+    </div>
+  </div>
+
+  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+  <script>
+    let calendar;
+    let currentMasterFilter = '';
+
+    // Check authentication
+    async function checkAuth() {
+      try {
+        const response = await fetch('/api/admin/auth/check');
+        if (!response.ok) {
+          window.location.href = '/admin/login.html';
+        }
+      } catch (error) {
+        window.location.href = '/admin/login.html';
+      }
+    }
+
+    // Logout
+    async function logout() {
+      try {
+        await fetch('/api/admin/auth/logout', { method: 'POST' });
+        window.location.href = '/admin/login.html';
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    }
+
+    // Load masters for filter
+    async function loadMasters() {
+      try {
+        const response = await fetch('/api/admin/masters');
+        const masters = await response.json();
+
+        const select = document.getElementById('masterFilter');
+        masters.forEach(master => {
+          const option = document.createElement('option');
+          option.value = master.id;
+          option.textContent = master.name;
+          select.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error loading masters:', error);
+      }
+    }
+
+    // Filter by master
+    function filterByMaster() {
+      const select = document.getElementById('masterFilter');
+      currentMasterFilter = select.value;
+      calendar.refetchEvents();
+    }
+
+    // Format date for display
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+
+    // Format time for display
+    function formatTime(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // Show booking details modal
+    function showBookingDetails(event) {
+      const props = event.extendedProps;
+
+      const statusClass = `status-${props.status}`;
+
+      const html = `
+        <div class="detail-row">
+          <div class="detail-label">Service:</div>
+          <div class="detail-value">${props.service_name}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Master:</div>
+          <div class="detail-value">${props.master_name}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Client:</div>
+          <div class="detail-value">${props.client_name || props.client_phone}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Phone:</div>
+          <div class="detail-value">${props.client_phone}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Date:</div>
+          <div class="detail-value">${formatDate(event.start)}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Time:</div>
+          <div class="detail-value">${formatTime(event.start)} - ${formatTime(event.end)}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Duration:</div>
+          <div class="detail-value">${props.duration} minutes</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Status:</div>
+          <div class="detail-value">
+            <span class="status-badge ${statusClass}">${props.status}</span>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('modalBody').innerHTML = html;
+      document.getElementById('bookingModal').style.display = 'block';
+    }
+
+    // Close modal
+    function closeModal() {
+      document.getElementById('bookingModal').style.display = 'none';
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+      const modal = document.getElementById('bookingModal');
+      if (event.target === modal) {
+        closeModal();
+      }
+    }
+
+    // Initialize calendar
+    function initCalendar() {
+      const calendarEl = document.getElementById('calendar');
+
+      calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        slotMinTime: '12:00:00',
+        slotMaxTime: '20:00:00',
+        slotDuration: '00:30:00',
+        allDaySlot: false,
+        height: 'auto',
+        weekends: true,
+        nowIndicator: true,
+        eventTimeFormat: {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        },
+        events: function(info, successCallback, failureCallback) {
+          const params = new URLSearchParams({
+            start: info.startStr.split('T')[0],
+            end: info.endStr.split('T')[0]
+          });
+
+          if (currentMasterFilter) {
+            params.append('master_id', currentMasterFilter);
+          }
+
+          fetch(`/api/admin/bookings/calendar/events?${params}`)
+            .then(response => response.json())
+            .then(data => successCallback(data))
+            .catch(error => {
+              console.error('Error loading events:', error);
+              failureCallback(error);
+            });
+        },
+        eventClick: function(info) {
+          showBookingDetails(info.event);
+        },
+        eventDidMount: function(info) {
+          // Add tooltip
+          info.el.title = `${info.event.extendedProps.service_name} - ${info.event.extendedProps.master_name}`;
+        }
+      });
+
+      calendar.render();
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      checkAuth();
+      loadMasters();
+      initCalendar();
+    });
+  </script>
+</body>
+</html>

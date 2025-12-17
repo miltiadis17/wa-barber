@@ -5,7 +5,7 @@ import { BookingModel } from '../models/booking.model';
 import { DialogModel } from '../models/dialog.model';
 import { AdminModel } from '../models/admin.model';
 import { getAvailableDates, formatDate, formatDateHuman, formatTime } from '../utils/date.utils';
-import { getOnlyAvailableSlots } from '../utils/slots.utils';
+import { getOnlyAvailableSlots, findFirstAvailableMaster } from '../utils/slots.utils';
 import { config } from '../config';
 
 export class BookingService {
@@ -53,11 +53,18 @@ export class BookingService {
     const sections = [
       {
         title: 'Our Masters',
-        rows: masters.map((master) => ({
-          id: `master_${master.id}`,
-          title: master.name,
-          description: 'Available',
-        })),
+        rows: [
+          {
+            id: 'master_0',
+            title: '✨ Any Available Master',
+            description: 'First available',
+          },
+          ...masters.map((master) => ({
+            id: `master_${master.id}`,
+            title: master.name,
+            description: 'Available',
+          })),
+        ],
       },
     ];
 
@@ -73,10 +80,15 @@ export class BookingService {
    * Handle master selection and show date selection
    */
   static async handleMasterSelection(phone: string, masterId: number): Promise<void> {
-    const master = await MasterModel.getById(masterId);
-    if (!master) {
-      await WhatsAppService.sendText(phone, 'Master not found. Please try again.');
-      return;
+    // Special case: masterId = 0 means "any available master"
+    const isAnyMaster = masterId === 0;
+
+    if (!isAnyMaster) {
+      const master = await MasterModel.getById(masterId);
+      if (!master) {
+        await WhatsAppService.sendText(phone, 'Master not found. Please try again.');
+        return;
+      }
     }
 
     const dialogState = await DialogModel.getState(phone);
@@ -101,9 +113,13 @@ export class BookingService {
       },
     ];
 
+    const message = isAnyMaster
+      ? `Perfect! We'll find you the first available master.\nSelect a date:`
+      : `Perfect! Master *${(await MasterModel.getById(masterId))?.name}* is ready.\nSelect a date:`;
+
     await WhatsAppService.sendList(
       phone,
-      `Perfect! Master *${master.name}* is ready.\nSelect a date:`,
+      message,
       'View Dates',
       sections
     );
@@ -207,7 +223,7 @@ Please confirm your booking:
     if (
       !dialogState ||
       !dialogState.data.service_id ||
-      !dialogState.data.master_id ||
+      dialogState.data.master_id === undefined ||
       !dialogState.data.booking_date ||
       !dialogState.data.booking_time
     ) {
@@ -216,11 +232,33 @@ Please confirm your booking:
     }
 
     try {
+      let actualMasterId = dialogState.data.master_id;
+
+      // If "any master" was selected (masterId = 0), find first available master
+      if (actualMasterId === 0) {
+        const foundMasterId = await findFirstAvailableMaster(
+          dialogState.data.booking_date,
+          dialogState.data.booking_time,
+          dialogState.data.service_id
+        );
+
+        if (!foundMasterId) {
+          await WhatsAppService.sendText(
+            phone,
+            'Sorry, this time slot is no longer available. Please choose another time.'
+          );
+          await this.handleDateSelection(phone, dialogState.data.booking_date);
+          return;
+        }
+
+        actualMasterId = foundMasterId;
+      }
+
       const booking = await BookingModel.create({
         client_phone: phone,
         client_name: dialogState.data.client_name || null,
         service_id: dialogState.data.service_id,
-        master_id: dialogState.data.master_id,
+        master_id: actualMasterId,
         booking_date: dialogState.data.booking_date,
         booking_time: dialogState.data.booking_time,
       });

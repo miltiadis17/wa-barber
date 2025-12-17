@@ -133,4 +133,91 @@ export class AdminBookingsController {
       res.status(500).json({ error: 'Failed to cancel booking' });
     }
   }
+
+  static async getCalendarEvents(req: Request, res: Response): Promise<void> {
+    try {
+      const { start, end, master_id } = req.query;
+
+      let query = `
+        SELECT
+          b.id,
+          b.booking_date,
+          b.booking_time,
+          b.status,
+          b.client_phone,
+          b.client_name,
+          s.name as service_name,
+          s.duration_minutes,
+          m.name as master_name,
+          m.id as master_id
+        FROM bookings b
+        JOIN services s ON b.service_id = s.id
+        JOIN masters m ON b.master_id = m.id
+        WHERE b.status != 'cancelled'
+      `;
+      const params: any[] = [];
+      let paramCount = 1;
+
+      if (start) {
+        query += ` AND b.booking_date >= $${paramCount}`;
+        params.push(start);
+        paramCount++;
+      }
+
+      if (end) {
+        query += ` AND b.booking_date <= $${paramCount}`;
+        params.push(end);
+        paramCount++;
+      }
+
+      if (master_id) {
+        query += ` AND b.master_id = $${paramCount}`;
+        params.push(master_id);
+        paramCount++;
+      }
+
+      query += ` ORDER BY b.booking_date, b.booking_time`;
+
+      const result = await pool.query(query, params);
+
+      // Transform to FullCalendar format
+      const events = result.rows.map((booking: any) => {
+        const [hours, minutes] = booking.booking_time.split(':');
+        const startDateTime = new Date(booking.booking_date);
+        startDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+        const endDateTime = new Date(startDateTime);
+        endDateTime.setMinutes(endDateTime.getMinutes() + booking.duration_minutes);
+
+        // Color coding by master
+        const colors: { [key: number]: string } = {
+          1: '#3B82F6', // blue
+          2: '#10B981', // green
+          3: '#F59E0B', // amber
+        };
+
+        return {
+          id: booking.id,
+          title: `${booking.service_name} - ${booking.master_name}`,
+          start: startDateTime.toISOString(),
+          end: endDateTime.toISOString(),
+          backgroundColor: colors[booking.master_id] || '#6B7280',
+          borderColor: colors[booking.master_id] || '#6B7280',
+          extendedProps: {
+            client_phone: booking.client_phone,
+            client_name: booking.client_name,
+            master_name: booking.master_name,
+            service_name: booking.service_name,
+            status: booking.status,
+            duration: booking.duration_minutes,
+          },
+        };
+      });
+
+      res.json(events);
+    } catch (error) {
+      console.error('Error fetching calendar events:', error);
+      res.status(500).json({ error: 'Failed to fetch calendar events' });
+    }
+  }
 }

@@ -110,14 +110,43 @@ export async function getAvailableSlots(
 }
 
 /**
+ * Get available slots across all masters (union of all available times)
+ * Used when client selects "Any Available Master"
+ */
+async function getAvailableSlotsForAnyMaster(
+  dateStr: string,
+  serviceId?: number
+): Promise<string[]> {
+  const { MasterModel } = await import('../models/master.model');
+  const allMasters = await MasterModel.getAll();
+
+  // Collect all available slots from all masters
+  const allAvailableSlots = new Set<string>();
+
+  for (const master of allMasters) {
+    const masterSlots = await getOnlyAvailableSlots(master.id, dateStr, serviceId);
+    masterSlots.forEach((slot) => allAvailableSlots.add(slot));
+  }
+
+  // Convert to sorted array
+  return Array.from(allAvailableSlots).sort();
+}
+
+/**
  * Get only available time slots for a service (accounting for service duration)
  * If service requires 60 minutes, only shows slots where 2 consecutive 30min slots are free
+ * If masterId = 0, checks availability across all masters
  */
 export async function getOnlyAvailableSlots(
   masterId: number,
   dateStr: string,
   serviceId?: number
 ): Promise<string[]> {
+  // Special case: masterId = 0 means "any available master"
+  if (masterId === 0) {
+    return getAvailableSlotsForAnyMaster(dateStr, serviceId);
+  }
+
   const allSlots = await getAvailableSlots(masterId, dateStr);
   const availableSlots = allSlots.filter((slot) => slot.available).map((slot) => slot.time);
 
@@ -185,4 +214,26 @@ export async function isSlotAvailable(
 ): Promise<boolean> {
   const availableSlots = await getOnlyAvailableSlots(masterId, dateStr, serviceId);
   return availableSlots.includes(timeStr);
+}
+
+/**
+ * Find first available master for a specific time slot and service
+ * Returns null if no master is available
+ */
+export async function findFirstAvailableMaster(
+  dateStr: string,
+  timeStr: string,
+  serviceId: number
+): Promise<number | null> {
+  const { MasterModel } = await import('../models/master.model');
+  const allMasters = await MasterModel.getAll();
+
+  for (const master of allMasters) {
+    const isAvailable = await isSlotAvailable(master.id, dateStr, timeStr, serviceId);
+    if (isAvailable) {
+      return master.id;
+    }
+  }
+
+  return null;
 }
