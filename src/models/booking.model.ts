@@ -81,6 +81,26 @@ export class BookingModel {
     return result.rows.map((row) => row.booking_time);
   }
 
+  static async getBookedSlotsWithDuration(
+    masterId: number,
+    date: string
+  ): Promise<Array<{ booking_time: string; duration_minutes: number }>> {
+    const result = await pool.query<{
+      booking_time: string;
+      duration_minutes: number;
+    }>(
+      `SELECT b.booking_time, s.duration_minutes
+       FROM bookings b
+       JOIN services s ON b.service_id = s.id
+       WHERE b.master_id = $1
+         AND b.booking_date = $2
+         AND b.status = 'confirmed'
+       ORDER BY b.booking_time ASC`,
+      [masterId, date]
+    );
+    return result.rows;
+  }
+
   static async getBookingsByDate(date: string): Promise<BookingWithDetails[]> {
     const result = await pool.query<BookingWithDetails>(
       `SELECT b.*, s.name as service_name, m.name as master_name

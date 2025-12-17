@@ -114,19 +114,22 @@ export class BookingService {
    */
   static async handleDateSelection(phone: string, dateStr: string): Promise<void> {
     const dialogState = await DialogModel.getState(phone);
-    if (!dialogState || !dialogState.data.master_id) {
+    if (!dialogState || !dialogState.data.master_id || !dialogState.data.service_id) {
       return this.startBooking(phone);
     }
 
+    // Pass service_id to get slots accounting for service duration
     const availableSlots = await getOnlyAvailableSlots(
       dialogState.data.master_id,
-      dateStr
+      dateStr,
+      dialogState.data.service_id
     );
 
     if (availableSlots.length === 0) {
+      const service = await ServiceModel.getById(dialogState.data.service_id);
       await WhatsAppService.sendText(
         phone,
-        'Sorry, no available slots for this date. Please choose another date.'
+        `Sorry, no available ${service?.duration_minutes}-minute slots for this date. Please choose another date.`
       );
       return;
     }
