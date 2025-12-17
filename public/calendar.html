@@ -255,6 +255,106 @@
       background-color: #fee2e2;
       color: var(--danger-color, #dc2626);
     }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .modal-actions button {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-edit {
+      background-color: var(--primary-color, #2563eb);
+      color: white;
+    }
+
+    .btn-edit:hover {
+      background-color: var(--primary-hover, #1d4ed8);
+    }
+
+    .btn-delete {
+      background-color: var(--danger-color, #dc2626);
+      color: white;
+    }
+
+    .btn-delete:hover {
+      background-color: var(--danger-hover, #b91c1c);
+    }
+
+    .btn-save {
+      background-color: var(--success-color, #16a34a);
+      color: white;
+    }
+
+    .btn-save:hover {
+      background-color: var(--success-hover, #15803d);
+    }
+
+    .btn-cancel {
+      background-color: #e5e7eb;
+      color: var(--text-primary, #1f2937);
+    }
+
+    .btn-cancel:hover {
+      background-color: #d1d5db;
+    }
+
+    .edit-form {
+      display: none;
+    }
+
+    .edit-form.active {
+      display: block;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text-primary, #1f2937);
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--primary-color, #2563eb);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .view-mode {
+      display: block;
+    }
+
+    .view-mode.hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -328,11 +428,60 @@
   <div id="bookingModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Booking Details</h2>
+        <h2 id="modalTitle">Booking Details</h2>
         <span class="close" onclick="closeModal()">&times;</span>
       </div>
-      <div class="modal-body" id="modalBody">
-        <!-- Details will be inserted here -->
+      <div class="modal-body">
+        <!-- View Mode -->
+        <div id="viewMode" class="view-mode">
+          <div id="modalBody"></div>
+          <div class="modal-actions">
+            <button class="btn-edit" onclick="enterEditMode()">✏️ Edit</button>
+            <button class="btn-delete" onclick="deleteBooking()">🗑️ Delete</button>
+          </div>
+        </div>
+
+        <!-- Edit Mode -->
+        <div id="editMode" class="edit-form">
+          <form id="editForm">
+            <div class="form-group">
+              <label for="editService">Service</label>
+              <select id="editService" required>
+                <!-- Options loaded dynamically -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editMaster">Master</label>
+              <select id="editMaster" required>
+                <!-- Options loaded dynamically -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editDate">Date</label>
+              <input type="date" id="editDate" required>
+            </div>
+            <div class="form-group">
+              <label for="editTime">Time</label>
+              <input type="time" id="editTime" required>
+            </div>
+            <div class="form-group">
+              <label for="editStatus">Status</label>
+              <select id="editStatus" required>
+                <option value="confirmed">Confirmed</option>
+                <option value="pending">Pending</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editClientName">Client Name</label>
+              <input type="text" id="editClientName" placeholder="Optional">
+            </div>
+            <div class="modal-actions">
+              <button type="submit" class="btn-save">💾 Save</button>
+              <button type="button" class="btn-cancel" onclick="exitEditMode()">✖️ Cancel</button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   </div>
@@ -341,6 +490,9 @@
   <script>
     let calendar;
     let currentMasterFilter = '';
+    let currentBooking = null;
+    let allServices = [];
+    let allMasters = [];
 
     // Check authentication
     async function checkAuth() {
@@ -368,10 +520,10 @@
     async function loadMasters() {
       try {
         const response = await fetch('/api/admin/masters');
-        const masters = await response.json();
+        allMasters = await response.json();
 
         const select = document.getElementById('masterFilter');
-        masters.forEach(master => {
+        allMasters.forEach(master => {
           const option = document.createElement('option');
           option.value = master.id;
           option.textContent = master.name;
@@ -380,6 +532,39 @@
       } catch (error) {
         console.error('Error loading masters:', error);
       }
+    }
+
+    // Load services
+    async function loadServices() {
+      try {
+        const response = await fetch('/api/admin/services');
+        allServices = await response.json();
+      } catch (error) {
+        console.error('Error loading services:', error);
+      }
+    }
+
+    // Populate edit form selects
+    function populateEditForm() {
+      // Populate services
+      const serviceSelect = document.getElementById('editService');
+      serviceSelect.innerHTML = '';
+      allServices.forEach(service => {
+        const option = document.createElement('option');
+        option.value = service.id;
+        option.textContent = `${service.name} (${service.duration_minutes} min)`;
+        serviceSelect.appendChild(option);
+      });
+
+      // Populate masters
+      const masterSelect = document.getElementById('editMaster');
+      masterSelect.innerHTML = '';
+      allMasters.forEach(master => {
+        const option = document.createElement('option');
+        option.value = master.id;
+        option.textContent = master.name;
+        masterSelect.appendChild(option);
+      });
     }
 
     // Filter by master
@@ -411,6 +596,14 @@
     // Show booking details modal
     function showBookingDetails(event) {
       const props = event.extendedProps;
+
+      // Store current booking data
+      currentBooking = {
+        id: event.id,
+        start: event.start,
+        end: event.end,
+        ...props
+      };
 
       const statusClass = `status-${props.status}`;
 
@@ -452,12 +645,119 @@
       `;
 
       document.getElementById('modalBody').innerHTML = html;
+
+      // Reset to view mode
+      document.getElementById('viewMode').classList.remove('hidden');
+      document.getElementById('editMode').classList.remove('active');
+      document.getElementById('modalTitle').textContent = 'Booking Details';
+
       document.getElementById('bookingModal').style.display = 'block';
+    }
+
+    // Enter edit mode
+    function enterEditMode() {
+      if (!currentBooking) return;
+
+      populateEditForm();
+
+      // Find service ID and master ID from names
+      const service = allServices.find(s => s.name === currentBooking.service_name);
+      const master = allMasters.find(m => m.name === currentBooking.master_name);
+
+      // Fill form
+      document.getElementById('editService').value = service ? service.id : '';
+      document.getElementById('editMaster').value = master ? master.id : '';
+
+      const dateStr = currentBooking.start.toISOString().split('T')[0];
+      const timeStr = currentBooking.start.toTimeString().substring(0, 5);
+
+      document.getElementById('editDate').value = dateStr;
+      document.getElementById('editTime').value = timeStr;
+      document.getElementById('editStatus').value = currentBooking.status;
+      document.getElementById('editClientName').value = currentBooking.client_name || '';
+
+      // Switch to edit mode
+      document.getElementById('viewMode').classList.add('hidden');
+      document.getElementById('editMode').classList.add('active');
+      document.getElementById('modalTitle').textContent = 'Edit Booking';
+    }
+
+    // Exit edit mode
+    function exitEditMode() {
+      document.getElementById('viewMode').classList.remove('hidden');
+      document.getElementById('editMode').classList.remove('active');
+      document.getElementById('modalTitle').textContent = 'Booking Details';
+    }
+
+    // Save booking changes
+    document.getElementById('editForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const formData = {
+        service_id: parseInt(document.getElementById('editService').value),
+        master_id: parseInt(document.getElementById('editMaster').value),
+        booking_date: document.getElementById('editDate').value,
+        booking_time: document.getElementById('editTime').value + ':00',
+        status: document.getElementById('editStatus').value,
+        client_name: document.getElementById('editClientName').value || null
+      };
+
+      try {
+        const response = await fetch(`/api/admin/bookings/${currentBooking.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          alert(error.error || 'Failed to update booking');
+          return;
+        }
+
+        // Success - refresh calendar and close modal
+        calendar.refetchEvents();
+        closeModal();
+        alert('Booking updated successfully!');
+      } catch (error) {
+        console.error('Error updating booking:', error);
+        alert('Failed to update booking');
+      }
+    });
+
+    // Delete booking
+    async function deleteBooking() {
+      if (!currentBooking) return;
+
+      if (!confirm('Are you sure you want to cancel this booking?')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/admin/bookings/${currentBooking.id}`, {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) {
+          alert('Failed to cancel booking');
+          return;
+        }
+
+        // Success - refresh calendar and close modal
+        calendar.refetchEvents();
+        closeModal();
+        alert('Booking cancelled successfully!');
+      } catch (error) {
+        console.error('Error cancelling booking:', error);
+        alert('Failed to cancel booking');
+      }
     }
 
     // Close modal
     function closeModal() {
       document.getElementById('bookingModal').style.display = 'none';
+      exitEditMode();
+      currentBooking = null;
     }
 
     // Close modal when clicking outside
@@ -486,6 +786,9 @@
         height: 'auto',
         weekends: true,
         nowIndicator: true,
+        editable: true,
+        eventStartEditable: true,
+        eventDurationEditable: false,
         eventTimeFormat: {
           hour: '2-digit',
           minute: '2-digit',
@@ -515,6 +818,37 @@
         eventDidMount: function(info) {
           // Add tooltip
           info.el.title = `${info.event.extendedProps.service_name} - ${info.event.extendedProps.master_name}`;
+        },
+        eventDrop: async function(info) {
+          // Handle drag & drop
+          const event = info.event;
+
+          const newDate = event.start.toISOString().split('T')[0];
+          const newTime = event.start.toTimeString().substring(0, 8);
+
+          try {
+            const response = await fetch(`/api/admin/bookings/${event.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                booking_date: newDate,
+                booking_time: newTime
+              })
+            });
+
+            if (!response.ok) {
+              const error = await response.json();
+              alert(error.error || 'Failed to move booking');
+              info.revert();
+              return;
+            }
+
+            alert('Booking moved successfully!');
+          } catch (error) {
+            console.error('Error moving booking:', error);
+            alert('Failed to move booking');
+            info.revert();
+          }
         }
       });
 
@@ -522,9 +856,10 @@
     }
 
     // Initialize on page load
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', async function() {
       checkAuth();
-      loadMasters();
+      await loadMasters();
+      await loadServices();
       initCalendar();
     });
   </script>
