@@ -7,8 +7,14 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">☰</button>
+
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" onclick="toggleMobileMenu()"></div>
+
     <div class="dashboard">
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h1>💈 Barbershop</h1>
                 <p>Admin Panel</p>
@@ -197,6 +203,23 @@
         async function logout() {
             await API.logout();
         }
+
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.querySelector('.mobile-overlay');
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        // Close mobile menu when clicking on navigation links
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    toggleMobileMenu();
+                }
+            });
+        });
 
         document.addEventListener('DOMContentLoaded', init);
     </script>

@@ -238,11 +238,96 @@
             justify-content: space-between;
             align-items: center;
         }
+
+        /* Mobile responsive styles for calendar */
+        @media screen and (max-width: 768px) {
+            .calendar-container {
+                padding: 12px;
+            }
+
+            .filter-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .filter-controls select {
+                width: 100%;
+            }
+
+            .legend {
+                flex-wrap: wrap;
+                gap: 12px;
+                padding: 12px;
+            }
+
+            .fc .fc-toolbar {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .fc .fc-toolbar-chunk {
+                display: flex;
+                justify-content: center;
+            }
+
+            .fc .fc-button {
+                padding: 6px 10px;
+                font-size: 13px;
+            }
+
+            .fc .fc-toolbar-title {
+                font-size: 16px;
+            }
+
+            /* Calendar view adjustments */
+            .fc-timeGridWeek-view .fc-col-header-cell,
+            .fc-timeGridWeek-view .fc-timegrid-slot {
+                font-size: 11px;
+            }
+
+            .fc-event {
+                font-size: 11px;
+                padding: 1px 2px;
+            }
+
+            /* Default to day view on mobile */
+            .fc .fc-dayGridMonth-button,
+            .fc .fc-timeGridWeek-button {
+                display: none;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .view-toggle button {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+
+            .legend {
+                gap: 8px;
+                padding: 10px;
+            }
+
+            .legend-item {
+                font-size: 12px;
+            }
+
+            .legend-color {
+                width: 12px;
+                height: 12px;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">☰</button>
+
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" onclick="toggleMobileMenu()"></div>
+
     <div class="dashboard">
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h1>💈 Barbershop</h1>
                 <p id="currentUser">Admin Panel</p>
@@ -568,12 +653,16 @@
         function initCalendar() {
             const calendarEl = document.getElementById('calendar');
 
+            // Use day view on mobile, week view on desktop
+            const isMobile = window.innerWidth <= 768;
+            const initialView = isMobile ? 'timeGridDay' : 'timeGridWeek';
+
             calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'timeGridWeek',
+                initialView: initialView,
                 headerToolbar: {
                     left: 'prev,next today',
                     center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                    right: isMobile ? 'timeGridDay' : 'dayGridMonth,timeGridWeek,timeGridDay'
                 },
                 slotMinTime: '12:00:00',
                 slotMaxTime: '20:00:00',
@@ -834,6 +923,23 @@
         async function logout() {
             await API.logout();
         }
+
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.querySelector('.mobile-overlay');
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        // Close mobile menu when clicking on navigation links
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    toggleMobileMenu();
+                }
+            });
+        });
 
         document.addEventListener('DOMContentLoaded', init);
     </script>

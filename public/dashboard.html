@@ -8,8 +8,14 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">☰</button>
+
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" onclick="toggleMobileMenu()"></div>
+
     <div class="dashboard">
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h1>💈 Barbershop</h1>
                 <p id="currentUser">Admin Panel</p>
@@ -60,7 +66,7 @@
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
                 <!-- Services Distribution Chart -->
                 <div class="card">
                     <div class="card-header">
@@ -146,6 +152,23 @@
         async function logout() {
             await API.logout();
         }
+
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.querySelector('.mobile-overlay');
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        // Close mobile menu when clicking on navigation links
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    toggleMobileMenu();
+                }
+            });
+        });
 
         // Load on page load
         document.addEventListener('DOMContentLoaded', loadDashboard);
