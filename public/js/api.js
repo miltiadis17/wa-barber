@@ -41,6 +41,19 @@ class API {
         return response.json();
     }
 
+    static async createBooking(data) {
+        const response = await fetch(`${API_BASE}/bookings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to create booking');
+        }
+        return response.json();
+    }
+
     static async updateBooking(id, data) {
         const response = await fetch(`${API_BASE}/bookings/${id}`, {
             method: 'PUT',

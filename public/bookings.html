@@ -5,6 +5,240 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bookings - Barbershop Admin</title>
     <link rel="stylesheet" href="css/style.css">
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css' rel='stylesheet' />
+    <style>
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .view-toggle button {
+            padding: 10px 20px;
+            border: 2px solid var(--primary-color, #2563eb);
+            background: white;
+            color: var(--primary-color, #2563eb);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .view-toggle button.active {
+            background: var(--primary-color, #2563eb);
+            color: white;
+        }
+
+        .view-toggle button:hover:not(.active) {
+            background: rgba(37, 99, 235, 0.1);
+        }
+
+        .view-container {
+            display: none;
+        }
+
+        .view-container.active {
+            display: block;
+        }
+
+        /* Calendar specific styles */
+        .calendar-container {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .filter-controls select {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .fc {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .fc .fc-button-primary {
+            background-color: var(--primary-color, #2563eb);
+            border-color: var(--primary-color, #2563eb);
+        }
+
+        .fc .fc-button-primary:hover {
+            background-color: var(--primary-hover, #1d4ed8);
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #6b7280;
+            line-height: 1;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+        }
+
+        .modal-close:hover {
+            color: #1f2937;
+        }
+
+        .detail-row {
+            display: flex;
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #64748b;
+            min-width: 120px;
+        }
+
+        .detail-value {
+            color: #1f2937;
+            flex: 1;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-confirmed {
+            background-color: #d1fae5;
+            color: #16a34a;
+        }
+
+        .status-cancelled {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-actions button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-edit {
+            background-color: #2563eb;
+            color: white;
+        }
+
+        .btn-delete {
+            background-color: #dc2626;
+            color: white;
+        }
+
+        .view-mode.hidden {
+            display: none;
+        }
+
+        .edit-form {
+            display: none;
+        }
+
+        .edit-form.active {
+            display: block;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .page-header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard">
@@ -23,10 +257,6 @@
                     <span class="nav-item-icon">📅</span>
                     Bookings
                 </a>
-                <a href="calendar.html" class="nav-item">
-                    <span class="nav-item-icon">🗓️</span>
-                    Calendar
-                </a>
                 <a href="masters.html" class="nav-item">
                     <span class="nav-item-icon">👨‍🦱</span>
                     Masters
@@ -44,72 +274,147 @@
 
         <main class="main-content">
             <div class="page-header">
-                <h1>Bookings</h1>
-                <p>View and manage all bookings</p>
+                <div class="page-header-actions">
+                    <div>
+                        <h1>Bookings</h1>
+                        <p>View and manage all bookings</p>
+                    </div>
+                    <button onclick="openCreateModal()" class="btn btn-primary">+ Add Booking</button>
+                </div>
             </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Filters</h2>
+            <!-- View Toggle -->
+            <div class="view-toggle">
+                <button id="listViewBtn" class="active" onclick="switchView('list')">📋 List View</button>
+                <button id="calendarViewBtn" onclick="switchView('calendar')">🗓️ Calendar View</button>
+            </div>
+
+            <!-- List View -->
+            <div id="listView" class="view-container active">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Filters</h2>
+                    </div>
+
+                    <div class="filters">
+                        <div class="filter-group">
+                            <label for="filterDate">Date</label>
+                            <input type="date" id="filterDate">
+                        </div>
+                        <div class="filter-group">
+                            <label for="filterMaster">Master</label>
+                            <select id="filterMaster">
+                                <option value="">All Masters</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filterPhone">Client Phone</label>
+                            <input type="text" id="filterPhone" placeholder="Search by phone...">
+                        </div>
+                        <div class="filter-group">
+                            <label for="filterStatus">Status</label>
+                            <select id="filterStatus">
+                                <option value="">All</option>
+                                <option value="confirmed">Confirmed</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button onclick="applyFilters()" class="btn btn-primary">Apply Filters</button>
+                    <button onclick="clearFilters()" class="btn btn-secondary">Clear</button>
                 </div>
 
-                <div class="filters">
-                    <div class="filter-group">
-                        <label for="filterDate">Date</label>
-                        <input type="date" id="filterDate">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Bookings List</h2>
                     </div>
-                    <div class="filter-group">
-                        <label for="filterMaster">Master</label>
-                        <select id="filterMaster">
+
+                    <div id="message" style="display: none;"></div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Service</th>
+                                    <th>Master</th>
+                                    <th>Client</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bookingsTable">
+                                <tr><td colspan="8" class="loading">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendar View -->
+            <div id="calendarView" class="view-container">
+                <div class="calendar-container">
+                    <div class="filter-controls">
+                        <label for="masterFilter">Filter by Master:</label>
+                        <select id="masterFilter" onchange="filterCalendarByMaster()">
                             <option value="">All Masters</option>
                         </select>
                     </div>
-                    <div class="filter-group">
-                        <label for="filterPhone">Client Phone</label>
-                        <input type="text" id="filterPhone" placeholder="Search by phone...">
+
+                    <div class="legend" id="calendarLegend">
+                        <!-- Legend items will be populated dynamically -->
                     </div>
-                    <div class="filter-group">
-                        <label for="filterStatus">Status</label>
-                        <select id="filterStatus">
-                            <option value="">All</option>
-                            <option value="confirmed">Confirmed</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
-                    </div>
-                </div>
 
-                <button onclick="applyFilters()" class="btn btn-primary">Apply Filters</button>
-                <button onclick="clearFilters()" class="btn btn-secondary">Clear</button>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Bookings List</h2>
-                </div>
-
-                <div id="message" style="display: none;"></div>
-
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Date</th>
-                                <th>Time</th>
-                                <th>Service</th>
-                                <th>Master</th>
-                                <th>Client</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="bookingsTable">
-                            <tr><td colspan="8" class="loading">Loading...</td></tr>
-                        </tbody>
-                    </table>
+                    <div id="calendar"></div>
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Create Booking Modal -->
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Booking</h2>
+                <button class="modal-close" onclick="closeCreateModal()">&times;</button>
+            </div>
+
+            <form id="createForm">
+                <div class="form-group">
+                    <label for="createClientPhone">Client Phone *</label>
+                    <input type="text" id="createClientPhone" required placeholder="+1234567890">
+                </div>
+                <div class="form-group">
+                    <label for="createClientName">Client Name</label>
+                    <input type="text" id="createClientName" placeholder="Optional">
+                </div>
+                <div class="form-group">
+                    <label for="createService">Service *</label>
+                    <select id="createService" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="createMaster">Master *</label>
+                    <select id="createMaster" required></select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="createDate">Date *</label>
+                        <input type="date" id="createDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="createTime">Time *</label>
+                        <input type="time" id="createTime" required>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary">Create Booking</button>
+                    <button type="button" onclick="closeCreateModal()" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Edit Modal -->
@@ -155,11 +460,34 @@
         </div>
     </div>
 
+    <!-- Calendar Event Details Modal -->
+    <div id="eventModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="eventModalTitle">Booking Details</h2>
+                <button class="modal-close" onclick="closeEventModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="viewMode" class="view-mode">
+                    <div id="eventModalBody"></div>
+                    <div class="modal-actions">
+                        <button class="btn-edit" onclick="editFromCalendar()">Edit</button>
+                        <button class="btn-delete" onclick="deleteFromCalendar()">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
     <script src="js/api.js"></script>
     <script>
         let bookings = [];
         let masters = [];
         let services = [];
+        let calendar = null;
+        let currentMasterFilter = '';
+        let currentEventBooking = null;
 
         async function init() {
             await API.checkAuth();
@@ -170,9 +498,22 @@
 
         async function loadMasters() {
             masters = await API.getMasters();
+
+            // Populate filter master select
             const selectHTML = '<option value="">All Masters</option>' +
                 masters.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
             document.getElementById('filterMaster').innerHTML = selectHTML;
+            document.getElementById('masterFilter').innerHTML = selectHTML;
+
+            // Update legend
+            const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+            const legendHTML = masters.map((m, i) => `
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: ${colors[i % colors.length]};"></div>
+                    <span>${m.name}</span>
+                </div>
+            `).join('');
+            document.getElementById('calendarLegend').innerHTML = legendHTML;
         }
 
         async function loadServices() {
@@ -207,6 +548,161 @@
             }
         }
 
+        function switchView(view) {
+            // Update buttons
+            document.getElementById('listViewBtn').classList.toggle('active', view === 'list');
+            document.getElementById('calendarViewBtn').classList.toggle('active', view === 'calendar');
+
+            // Update views
+            document.getElementById('listView').classList.toggle('active', view === 'list');
+            document.getElementById('calendarView').classList.toggle('active', view === 'calendar');
+
+            // Initialize calendar if switching to calendar view for the first time
+            if (view === 'calendar' && !calendar) {
+                initCalendar();
+            } else if (view === 'calendar' && calendar) {
+                calendar.refetchEvents();
+            }
+        }
+
+        function initCalendar() {
+            const calendarEl = document.getElementById('calendar');
+
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'timeGridWeek',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                slotMinTime: '12:00:00',
+                slotMaxTime: '20:00:00',
+                slotDuration: '00:30:00',
+                allDaySlot: false,
+                height: 'auto',
+                nowIndicator: true,
+                editable: true,
+                eventStartEditable: true,
+                eventDurationEditable: false,
+                events: function(info, successCallback, failureCallback) {
+                    const params = new URLSearchParams({
+                        start: info.startStr.split('T')[0],
+                        end: info.endStr.split('T')[0]
+                    });
+
+                    if (currentMasterFilter) {
+                        params.append('master_id', currentMasterFilter);
+                    }
+
+                    fetch(`/api/admin/bookings/calendar/events?${params}`)
+                        .then(response => response.json())
+                        .then(data => successCallback(data))
+                        .catch(error => {
+                            console.error('Error loading events:', error);
+                            failureCallback(error);
+                        });
+                },
+                eventClick: function(info) {
+                    showEventDetails(info.event);
+                },
+                eventDrop: async function(info) {
+                    const event = info.event;
+                    const newDate = event.start.toISOString().split('T')[0];
+                    const newTime = event.start.toTimeString().substring(0, 8);
+
+                    try {
+                        await API.updateBooking(event.id, {
+                            booking_date: newDate,
+                            booking_time: newTime
+                        });
+                        alert('Booking moved successfully!');
+                    } catch (error) {
+                        alert(error.message);
+                        info.revert();
+                    }
+                }
+            });
+
+            calendar.render();
+        }
+
+        function filterCalendarByMaster() {
+            const select = document.getElementById('masterFilter');
+            currentMasterFilter = select.value;
+            if (calendar) {
+                calendar.refetchEvents();
+            }
+        }
+
+        function showEventDetails(event) {
+            const props = event.extendedProps;
+            currentEventBooking = {
+                id: event.id,
+                start: event.start,
+                end: event.end,
+                ...props
+            };
+
+            const statusClass = `status-${props.status}`;
+            const html = `
+                <div class="detail-row">
+                    <div class="detail-label">Service:</div>
+                    <div class="detail-value">${props.service_name}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Master:</div>
+                    <div class="detail-value">${props.master_name}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Client:</div>
+                    <div class="detail-value">${props.client_name || props.client_phone}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Phone:</div>
+                    <div class="detail-value">${props.client_phone}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Time:</div>
+                    <div class="detail-value">${event.start.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - ${event.end.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Status:</div>
+                    <div class="detail-value">
+                        <span class="status-badge ${statusClass}">${props.status}</span>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('eventModalBody').innerHTML = html;
+            document.getElementById('eventModal').classList.add('active');
+        }
+
+        function closeEventModal() {
+            document.getElementById('eventModal').classList.remove('active');
+            currentEventBooking = null;
+        }
+
+        function editFromCalendar() {
+            if (!currentEventBooking) return;
+            closeEventModal();
+            editBooking(currentEventBooking.id);
+        }
+
+        async function deleteFromCalendar() {
+            if (!currentEventBooking) return;
+
+            if (!confirm('Are you sure you want to cancel this booking?')) return;
+
+            try {
+                await API.cancelBooking(currentEventBooking.id);
+                if (calendar) calendar.refetchEvents();
+                closeEventModal();
+                alert('Booking cancelled successfully!');
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
         function applyFilters() {
             const filters = {};
             const date = document.getElementById('filterDate').value;
@@ -230,17 +726,60 @@
             loadBookings();
         }
 
+        function openCreateModal() {
+            // Populate selects
+            document.getElementById('createService').innerHTML = services.map(s =>
+                `<option value="${s.id}">${s.name} (${s.duration_minutes} min)</option>`
+            ).join('');
+
+            document.getElementById('createMaster').innerHTML = masters.map(m =>
+                `<option value="${m.id}">${m.name}</option>`
+            ).join('');
+
+            // Set default date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('createDate').value = today;
+
+            document.getElementById('createModal').classList.add('active');
+        }
+
+        function closeCreateModal() {
+            document.getElementById('createModal').classList.remove('active');
+            document.getElementById('createForm').reset();
+        }
+
+        document.getElementById('createForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const data = {
+                client_phone: document.getElementById('createClientPhone').value,
+                client_name: document.getElementById('createClientName').value || null,
+                service_id: parseInt(document.getElementById('createService').value),
+                master_id: parseInt(document.getElementById('createMaster').value),
+                booking_date: document.getElementById('createDate').value,
+                booking_time: document.getElementById('createTime').value + ':00'
+            };
+
+            try {
+                await API.createBooking(data);
+                showMessage('message', 'Booking created successfully', 'success');
+                closeCreateModal();
+                loadBookings();
+                if (calendar) calendar.refetchEvents();
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+
         async function editBooking(id) {
             const booking = bookings.find(b => b.id === id);
             if (!booking) return;
 
-            // Populate form
             document.getElementById('editId').value = booking.id;
             document.getElementById('editDate').value = booking.booking_date;
             document.getElementById('editTime').value = booking.booking_time;
             document.getElementById('editStatus').value = booking.status;
 
-            // Populate selects
             document.getElementById('editService').innerHTML = services.map(s =>
                 `<option value="${s.id}" ${s.id === booking.service_id ? 'selected' : ''}>${s.name}</option>`
             ).join('');
@@ -249,7 +788,6 @@
                 `<option value="${m.id}" ${m.id === booking.master_id ? 'selected' : ''}>${m.name}</option>`
             ).join('');
 
-            // Show modal
             document.getElementById('editModal').classList.add('active');
         }
 
@@ -264,6 +802,7 @@
                 await API.cancelBooking(id);
                 showMessage('message', 'Booking cancelled successfully', 'success');
                 loadBookings();
+                if (calendar) calendar.refetchEvents();
             } catch (error) {
                 showMessage('message', error.message, 'error');
             }
@@ -286,6 +825,7 @@
                 showMessage('message', 'Booking updated successfully', 'success');
                 closeEditModal();
                 loadBookings();
+                if (calendar) calendar.refetchEvents();
             } catch (error) {
                 showMessage('message', error.message, 'error');
             }

@@ -113,6 +113,36 @@ export class AdminBookingsController {
     }
   }
 
+  static async create(req: Request, res: Response): Promise<void> {
+    try {
+      const { service_id, master_id, booking_date, booking_time, client_phone, client_name } = req.body;
+
+      // Validate required fields
+      if (!service_id || !master_id || !booking_date || !booking_time || !client_phone) {
+        res.status(400).json({ error: 'Missing required fields' });
+        return;
+      }
+
+      const result = await pool.query(
+        `INSERT INTO bookings (service_id, master_id, booking_date, booking_time, client_phone, client_name, status)
+         VALUES ($1, $2, $3, $4, $5, $6, 'confirmed')
+         RETURNING *`,
+        [service_id, master_id, booking_date, booking_time, client_phone, client_name || null]
+      );
+
+      res.status(201).json(result.rows[0]);
+    } catch (error: any) {
+      console.error('Error creating booking:', error);
+
+      if (error.code === '23505') {
+        res.status(409).json({ error: 'Time slot already booked' });
+        return;
+      }
+
+      res.status(500).json({ error: 'Failed to create booking' });
+    }
+  }
+
   static async delete(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
